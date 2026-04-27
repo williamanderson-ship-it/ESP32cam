@@ -4,11 +4,12 @@ import anthropic
 from flask import Flask, request, jsonify, render_template
 from supabase import create_client, Client
 from datetime import datetime
+from PIL import Image
+import io
 import uuid
 
 app = Flask(__name__)
 
-# --- Config (set these as environment variables on Render) ---
 SUPABASE_URL = os.environ.get("SUPABASE_URL")
 SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY")
@@ -57,9 +58,18 @@ def index():
 
 @app.route("/upload", methods=["POST"])
 def upload():
-    image_bytes = request.data
-    if not image_bytes:
+    raw_bytes = request.data
+    if not raw_bytes:
         return jsonify({"error": "No image data received"}), 400
+
+    width = int(request.headers.get("X-Image-Width", 160))
+    height = int(request.headers.get("X-Image-Height", 120))
+
+    # Convert raw RGB565 to JPEG
+    img = Image.frombytes("RGB", (width, height), raw_bytes, "raw", "RGB565")
+    buf = io.BytesIO()
+    img.save(buf, format="JPEG", quality=85)
+    image_bytes = buf.getvalue()
 
     image_id = str(uuid.uuid4())
     filename = f"{image_id}.jpg"
