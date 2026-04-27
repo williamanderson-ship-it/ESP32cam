@@ -27,68 +27,110 @@
     }
     button:hover { background: #fff; }
     #status { font-size: 0.8rem; color: #555; margin-bottom: 1.5rem; letter-spacing: 0.05em; }
+    .hint { font-size: 0.78rem; color: #444; margin-bottom: 1.5rem; letter-spacing: 0.05em; }
     .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.2rem; }
     .card { background: #1a1a1a; border: 1px solid #2a2a2a; overflow: hidden; }
     .card img { width: 100%; aspect-ratio: 4/3; object-fit: cover; display: block; background: #111; }
     .card-body { padding: 0.8rem; }
     .card-desc { font-size: 0.8rem; color: #bbb; line-height: 1.5; margin-bottom: 0.5rem; }
-    .card-time { font-size: 0.68rem; color: #444; letter-spacing: 0.06em; }
+    .card-time { font-size: 0.68rem; color: #444; letter-spacing: 0.06em; margin-bottom: 0.8rem; }
+    .claim-btn {
+      width: 100%; background: transparent; border: 1px solid #555; color: #888;
+      padding: 0.5rem; font-family: inherit; font-size: 0.75rem; letter-spacing: 0.1em;
+      text-transform: uppercase; cursor: pointer; transition: all 0.2s;
+    }
+    .claim-btn:hover { background: #e0e0e0; color: #0f0f0f; border-color: #e0e0e0; }
+    .claim-btn:disabled { opacity: 0.3; cursor: not-allowed; }
   </style>
 </head>
 <body>
   <h1>ESP32 Camera</h1>
   <p class="subtitle">AI-described image archive</p>
   <div class="search-row">
-    <input type="text" id="searchInput" placeholder="Search descriptions..." />
+    <input type="text" id="searchInput" placeholder="Search for an item..." />
     <button onclick="search()">Search</button>
-    <button onclick="clearSearch()">All</button>
   </div>
-  <div id="status">Loading...</div>
+  <div id="status"></div>
+  <p class="hint">Search for a description to reveal matching images. Click "Claim" to remove an item.</p>
   <div class="grid" id="grid"></div>
+
   <script>
     function formatTime(iso) {
       const d = new Date(iso + 'Z');
       return d.toLocaleString();
     }
+
     async function search() {
       const q = document.getElementById('searchInput').value.trim();
-      const url = q ? `/search?q=${encodeURIComponent(q)}` : '/search';
+      if (!q) {
+        document.getElementById('status').textContent = 'Enter a search term to find items.';
+        document.getElementById('grid').innerHTML = '';
+        return;
+      }
       document.getElementById('status').textContent = 'Searching...';
       try {
-        const res = await fetch(url);
+        const res = await fetch(`/search?q=${encodeURIComponent(q)}`);
         const data = await res.json();
         renderCards(data, q);
       } catch (e) {
         document.getElementById('status').textContent = 'Error loading results.';
       }
     }
-    function clearSearch() {
-      document.getElementById('searchInput').value = '';
-      search();
+
+    async function claim(id, cardEl, btn) {
+      btn.disabled = true;
+      btn.textContent = 'Claiming...';
+      try {
+        const res = await fetch(`/claim/${id}`, { method: 'DELETE' });
+        if (res.ok) {
+          cardEl.style.transition = 'opacity 0.3s';
+          cardEl.style.opacity = '0';
+          setTimeout(() => cardEl.remove(), 300);
+        } else {
+          btn.disabled = false;
+          btn.textContent = 'Claim';
+          alert('Failed to claim item.');
+        }
+      } catch (e) {
+        btn.disabled = false;
+        btn.textContent = 'Claim';
+        alert('Error claiming item.');
+      }
     }
+
     function renderCards(images, query) {
       const grid = document.getElementById('grid');
       const status = document.getElementById('status');
+
       if (!images.length) {
         grid.innerHTML = '';
-        status.textContent = query ? `No results for "${query}"` : 'No images yet.';
+        status.textContent = `No items found matching "${query}"`;
         return;
       }
-      status.textContent = `${images.length} image${images.length !== 1 ? 's' : ''}${query ? ` matching "${query}"` : ''}`;
-      grid.innerHTML = images.map(img => `
-        <div class="card">
+
+      status.textContent = `${images.length} item${images.length !== 1 ? 's' : ''} matching "${query}"`;
+
+      grid.innerHTML = '';
+      images.forEach(img => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML = `
           <img src="${img.url}" alt="captured image" loading="lazy" />
           <div class="card-body">
             <p class="card-desc">${img.description || 'No description.'}</p>
             <p class="card-time">${formatTime(img.created_at)}</p>
+            <button class="claim-btn">Claim</button>
           </div>
-        </div>
-      `).join('');
+        `;
+        const btn = card.querySelector('.claim-btn');
+        btn.addEventListener('click', () => claim(img.id, card, btn));
+        grid.appendChild(card);
+      });
     }
+
     document.getElementById('searchInput').addEventListener('keydown', e => {
       if (e.key === 'Enter') search();
     });
-    search();
   </script>
 </body>
 </html>
