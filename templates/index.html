@@ -135,7 +135,7 @@
     <script>
         function formatTime(iso) {
             const d = new Date(iso + 'Z');
-            return d.toLocaleString();
+            return d.toLocaleString('en-US', { timeZone: 'America/New_York', dateStyle: 'medium', timeStyle: 'short' });
         }
 
         function highlight(text, query) {
