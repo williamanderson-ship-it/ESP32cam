@@ -23,7 +23,7 @@ claude = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
 def describe_image(image_bytes: bytes) -> str:
     b64 = base64.standard_b64encode(image_bytes).decode("utf-8")
     message = claude.messages.create(
-        model="claude-sonnet-4-20250514",
+        model="claude-sonnet-4-5",
         max_tokens=512,
         messages=[
             {
