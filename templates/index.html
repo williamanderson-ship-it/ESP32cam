@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ESP32 Camera</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Courier New', monospace;
+      background: #0f0f0f;
+      color: #e0e0e0;
+      min-height: 100vh;
+      padding: 2rem;
+    }
+    h1 { font-size: 1.4rem; letter-spacing: 0.15em; text-transform: uppercase; color: #fff; margin-bottom: 0.3rem; }
+    .subtitle { font-size: 0.75rem; color: #555; letter-spacing: 0.1em; margin-bottom: 2rem; }
+    .search-row { display: flex; gap: 0.5rem; margin-bottom: 2rem; max-width: 600px; }
+    input[type="text"] {
+      flex: 1; background: #1a1a1a; border: 1px solid #333; color: #e0e0e0;
+      padding: 0.6rem 1rem; font-family: inherit; font-size: 0.9rem; outline: none; transition: border-color 0.2s;
+    }
+    input[type="text"]:focus { border-color: #888; }
+    button {
+      background: #e0e0e0; color: #0f0f0f; border: none; padding: 0.6rem 1.2rem;
+      font-family: inherit; font-size: 0.85rem; letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer;
+    }
+    button:hover { background: #fff; }
+    #status { font-size: 0.8rem; color: #555; margin-bottom: 1.5rem; letter-spacing: 0.05em; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.2rem; }
+    .card { background: #1a1a1a; border: 1px solid #2a2a2a; overflow: hidden; }
+    .card img { width: 100%; aspect-ratio: 4/3; object-fit: cover; display: block; background: #111; }
+    .card-body { padding: 0.8rem; }
+    .card-desc { font-size: 0.8rem; color: #bbb; line-height: 1.5; margin-bottom: 0.5rem; }
+    .card-time { font-size: 0.68rem; color: #444; letter-spacing: 0.06em; }
+  </style>
+</head>
+<body>
+  <h1>ESP32 Camera</h1>
+  <p class="subtitle">AI-described image archive</p>
+  <div class="search-row">
+    <input type="text" id="searchInput" placeholder="Search descriptions..." />
+    <button onclick="search()">Search</button>
+    <button onclick="clearSearch()">All</button>
+  </div>
+  <div id="status">Loading...</div>
+  <div class="grid" id="grid"></div>
+  <script>
+    function formatTime(iso) {
+      const d = new Date(iso + 'Z');
+      return d.toLocaleString();
+    }
+    async function search() {
+      const q = document.getElementById('searchInput').value.trim();
+      const url = q ? `/search?q=${encodeURIComponent(q)}` : '/search';
+      document.getElementById('status').textContent = 'Searching...';
+      try {
+        const res = await fetch(url);
+        const data = await res.json();
+        renderCards(data, q);
+      } catch (e) {
+        document.getElementById('status').textContent = 'Error loading results.';
+      }
+    }
+    function clearSearch() {
+      document.getElementById('searchInput').value = '';
+      search();
+    }
+    function renderCards(images, query) {
+      const grid = document.getElementById('grid');
+      const status = document.getElementById('status');
+      if (!images.length) {
+        grid.innerHTML = '';
+        status.textContent = query ? `No results for "${query}"` : 'No images yet.';
+        return;
+      }
+      status.textContent = `${images.length} image${images.length !== 1 ? 's' : ''}${query ? ` matching "${query}"` : ''}`;
+      grid.innerHTML = images.map(img => `
+        <div class="card">
+          <img src="${img.url}" alt="captured image" loading="lazy" />
+          <div class="card-body">
+            <p class="card-desc">${img.description || 'No description.'}</p>
+            <p class="card-time">${formatTime(img.created_at)}</p>
+          </div>
+        </div>
+      `).join('');
+    }
+    document.getElementById('searchInput').addEventListener('keydown', e => {
+      if (e.key === 'Enter') search();
+    });
+    search();
+  </script>
+</body>
+</html>
