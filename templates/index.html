@@ -1,136 +1,227 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>ESP32 Camera</title>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: 'Courier New', monospace;
-      background: #0f0f0f;
-      color: #e0e0e0;
-      min-height: 100vh;
-      padding: 2rem;
-    }
-    h1 { font-size: 1.4rem; letter-spacing: 0.15em; text-transform: uppercase; color: #fff; margin-bottom: 0.3rem; }
-    .subtitle { font-size: 0.75rem; color: #555; letter-spacing: 0.1em; margin-bottom: 2rem; }
-    .search-row { display: flex; gap: 0.5rem; margin-bottom: 2rem; max-width: 600px; }
-    input[type="text"] {
-      flex: 1; background: #1a1a1a; border: 1px solid #333; color: #e0e0e0;
-      padding: 0.6rem 1rem; font-family: inherit; font-size: 0.9rem; outline: none; transition: border-color 0.2s;
-    }
-    input[type="text"]:focus { border-color: #888; }
-    button {
-      background: #e0e0e0; color: #0f0f0f; border: none; padding: 0.6rem 1.2rem;
-      font-family: inherit; font-size: 0.85rem; letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer;
-    }
-    button:hover { background: #fff; }
-    #status { font-size: 0.8rem; color: #555; margin-bottom: 1.5rem; letter-spacing: 0.05em; }
-    .hint { font-size: 0.78rem; color: #444; margin-bottom: 1.5rem; letter-spacing: 0.05em; }
-    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.2rem; }
-    .card { background: #1a1a1a; border: 1px solid #2a2a2a; overflow: hidden; }
-    .card img { width: 100%; aspect-ratio: 4/3; object-fit: cover; display: block; background: #111; }
-    .card-body { padding: 0.8rem; }
-    .card-desc { font-size: 0.8rem; color: #bbb; line-height: 1.5; margin-bottom: 0.5rem; }
-    .card-time { font-size: 0.68rem; color: #444; letter-spacing: 0.06em; margin-bottom: 0.8rem; }
-    .claim-btn {
-      width: 100%; background: transparent; border: 1px solid #555; color: #888;
-      padding: 0.5rem; font-family: inherit; font-size: 0.75rem; letter-spacing: 0.1em;
-      text-transform: uppercase; cursor: pointer; transition: all 0.2s;
-    }
-    .claim-btn:hover { background: #e0e0e0; color: #0f0f0f; border-color: #e0e0e0; }
-    .claim-btn:disabled { opacity: 0.3; cursor: not-allowed; }
-  </style>
+    <meta charset="UTF-8">
+    <title>Jumbo Lost & Found</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: #111;
+            color: white;
+            padding: 40px 20px;
+        }
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        header h1 {
+            font-size: 2.5rem;
+            color: #3b82f6;
+            margin-bottom: 10px;
+        }
+        header p {
+            color: #888;
+            font-size: 1rem;
+            margin-bottom: 24px;
+        }
+        .search-box {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .search-box input {
+            width: 400px;
+            padding: 12px 18px;
+            border-radius: 8px;
+            border: 2px solid #333;
+            background: #222;
+            color: white;
+            font-size: 1rem;
+            outline: none;
+            transition: border 0.2s;
+        }
+        .search-box input:focus { border-color: #3b82f6; }
+        .search-box button {
+            padding: 12px 24px;
+            background: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .search-box button:hover { background: #2563eb; }
+        #status {
+            text-align: center;
+            color: #888;
+            margin-bottom: 20px;
+            font-size: 0.9rem;
+        }
+        .items {
+            max-width: 700px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .item {
+            background: #222;
+            border-radius: 10px;
+            padding: 15px;
+            display: flex;
+            gap: 20px;
+            align-items: flex-start;
+        }
+        .item img {
+            width: 200px;
+            height: 150px;
+            object-fit: cover;
+            border-radius: 8px;
+            flex-shrink: 0;
+        }
+        .item-info { flex: 1; }
+        .description {
+            font-size: 1rem;
+            line-height: 1.6;
+            color: #ddd;
+        }
+        .time {
+            color: #888;
+            font-size: 0.75rem;
+            margin-top: 8px;
+        }
+        .claim-btn {
+            margin-top: 14px;
+            padding: 8px 20px;
+            background: #22c55e;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .claim-btn:hover { background: #16a34a; }
+        .claim-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+        .no-results {
+            text-align: center;
+            color: #888;
+            margin-top: 60px;
+            font-size: 1.1rem;
+        }
+        mark {
+            background: #3b82f6;
+            color: black;
+            border-radius: 3px;
+            padding: 0 2px;
+        }
+    </style>
 </head>
 <body>
-  <h1>ESP32 Camera</h1>
-  <p class="subtitle">AI-described image archive</p>
-  <div class="search-row">
-    <input type="text" id="searchInput" placeholder="Search for an item..." />
-    <button onclick="search()">Search</button>
-  </div>
-  <div id="status"></div>
-  <p class="hint">Search for a description to reveal matching images. Click "Claim" to remove an item.</p>
-  <div class="grid" id="grid"></div>
+    <header>
+        <h1>🐘 Jumbo Lost &amp; Found 🐘</h1>
+        <p>Type what you lost and we'll find it for you</p>
+        <div class="search-box">
+            <input type="text" id="search" placeholder="e.g. keys, water bottle, jacket..." />
+            <button onclick="doSearch()">Search</button>
+        </div>
+        <div id="status"></div>
+    </header>
+    <div class="items" id="items"></div>
 
-  <script>
-    function formatTime(iso) {
-      const d = new Date(iso + 'Z');
-      return d.toLocaleString();
-    }
-
-    async function search() {
-      const q = document.getElementById('searchInput').value.trim();
-      if (!q) {
-        document.getElementById('status').textContent = 'Enter a search term to find items.';
-        document.getElementById('grid').innerHTML = '';
-        return;
-      }
-      document.getElementById('status').textContent = 'Searching...';
-      try {
-        const res = await fetch(`/search?q=${encodeURIComponent(q)}`);
-        const data = await res.json();
-        renderCards(data, q);
-      } catch (e) {
-        document.getElementById('status').textContent = 'Error loading results.';
-      }
-    }
-
-    async function claim(id, cardEl, btn) {
-      btn.disabled = true;
-      btn.textContent = 'Claiming...';
-      try {
-        const res = await fetch(`/claim/${id}`, { method: 'DELETE' });
-        if (res.ok) {
-          cardEl.style.transition = 'opacity 0.3s';
-          cardEl.style.opacity = '0';
-          setTimeout(() => cardEl.remove(), 300);
-        } else {
-          btn.disabled = false;
-          btn.textContent = 'Claim';
-          alert('Failed to claim item.');
+    <script>
+        function formatTime(iso) {
+            const d = new Date(iso + 'Z');
+            return d.toLocaleString();
         }
-      } catch (e) {
-        btn.disabled = false;
-        btn.textContent = 'Claim';
-        alert('Error claiming item.');
-      }
-    }
 
-    function renderCards(images, query) {
-      const grid = document.getElementById('grid');
-      const status = document.getElementById('status');
+        function highlight(text, query) {
+            if (!query) return text;
+            const words = query.trim().split(/\s+/);
+            let result = text;
+            words.forEach(word => {
+                if (word.length < 2) return;
+                const re = new RegExp('(' + word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
+                result = result.replace(re, '<mark>$1</mark>');
+            });
+            return result;
+        }
 
-      if (!images.length) {
-        grid.innerHTML = '';
-        status.textContent = `No items found matching "${query}"`;
-        return;
-      }
+        async function claimItem(id, itemEl, btn) {
+            btn.disabled = true;
+            btn.textContent = 'Claiming...';
+            try {
+                const res = await fetch(`/claim/${id}`, { method: 'DELETE' });
+                if (res.ok) {
+                    itemEl.style.transition = 'opacity 0.3s';
+                    itemEl.style.opacity = '0';
+                    setTimeout(() => itemEl.remove(), 300);
+                } else {
+                    btn.disabled = false;
+                    btn.textContent = '✓ Claim';
+                    alert('Failed to claim item.');
+                }
+            } catch (e) {
+                btn.disabled = false;
+                btn.textContent = '✓ Claim';
+                alert('Error claiming item.');
+            }
+        }
 
-      status.textContent = `${images.length} item${images.length !== 1 ? 's' : ''} matching "${query}"`;
+        async function doSearch() {
+            const query = document.getElementById('search').value.trim();
+            const container = document.getElementById('items');
+            const status = document.getElementById('status');
 
-      grid.innerHTML = '';
-      images.forEach(img => {
-        const card = document.createElement('div');
-        card.className = 'card';
-        card.innerHTML = `
-          <img src="${img.url}" alt="captured image" loading="lazy" />
-          <div class="card-body">
-            <p class="card-desc">${img.description || 'No description.'}</p>
-            <p class="card-time">${formatTime(img.created_at)}</p>
-            <button class="claim-btn">Claim</button>
-          </div>
-        `;
-        const btn = card.querySelector('.claim-btn');
-        btn.addEventListener('click', () => claim(img.id, card, btn));
-        grid.appendChild(card);
-      });
-    }
+            if (!query) {
+                container.innerHTML = '';
+                status.textContent = '';
+                return;
+            }
 
-    document.getElementById('searchInput').addEventListener('keydown', e => {
-      if (e.key === 'Enter') search();
-    });
-  </script>
+            status.textContent = 'Searching...';
+
+            try {
+                const res = await fetch(`/search?q=${encodeURIComponent(query)}`);
+                const data = await res.json();
+
+                if (!data.length) {
+                    container.innerHTML = `<div class="no-results">No items found matching "${query}"</div>`;
+                    status.textContent = '0 results';
+                    return;
+                }
+
+                status.textContent = `${data.length} item(s) found`;
+                container.innerHTML = '';
+
+                data.forEach(item => {
+                    const el = document.createElement('div');
+                    el.className = 'item';
+                    el.innerHTML = `
+                        <img src="${item.url}" alt="lost item" />
+                        <div class="item-info">
+                            <div class="description">${highlight(item.description, query)}</div>
+                            <div class="time">🕐 Handed in: ${formatTime(item.created_at)}</div>
+                            <div class="time">📍 Location: NOLOP</div>
+                            <button class="claim-btn">✓ Claim</button>
+                        </div>
+                    `;
+                    const btn = el.querySelector('.claim-btn');
+                    btn.addEventListener('click', () => claimItem(item.id, el, btn));
+                    container.appendChild(el);
+                });
+
+            } catch (e) {
+                status.textContent = 'Error loading results.';
+            }
+        }
+
+        document.getElementById('search').addEventListener('keydown', e => {
+            if (e.key === 'Enter') doSearch();
+        });
+    </script>
 </body>
 </html>
