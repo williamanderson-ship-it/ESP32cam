@@ -1,5 +1,6 @@
 import os
 import base64
+import struct
 import anthropic
 from flask import Flask, request, jsonify, render_template
 from supabase import create_client, Client
@@ -65,8 +66,19 @@ def upload():
     width = int(request.headers.get("X-Image-Width", 160))
     height = int(request.headers.get("X-Image-Height", 120))
 
-    # Convert raw RGB565 to JPEG
-    img = Image.frombytes("RGB", (width, height), raw_bytes, "raw", "RGB565")
+    # Convert raw RGB565 to RGB888
+    rgb888 = bytearray(width * height * 3)
+    for i in range(width * height):
+        pixel = struct.unpack_from(">H", raw_bytes, i * 2)[0]
+        r = (pixel >> 11) & 0x1F
+        g = (pixel >> 5) & 0x3F
+        b = pixel & 0x1F
+        rgb888[i*3]   = (r << 3) | (r >> 2)
+        rgb888[i*3+1] = (g << 2) | (g >> 4)
+        rgb888[i*3+2] = (b << 3) | (b >> 2)
+    img = Image.frombytes("RGB", (width, height), bytes(rgb888))
+
+    # Save as JPEG
     buf = io.BytesIO()
     img.save(buf, format="JPEG", quality=85)
     image_bytes = buf.getvalue()
