@@ -78,7 +78,6 @@ def upload():
         rgb888[i*3+2] = (b << 3) | (b >> 2)
     img = Image.frombytes("RGB", (width, height), bytes(rgb888))
 
-    # Save as JPEG
     buf = io.BytesIO()
     img.save(buf, format="JPEG", quality=85)
     image_bytes = buf.getvalue()
@@ -119,24 +118,35 @@ def upload():
 def search():
     query = request.args.get("q", "").strip()
     if not query:
-        result = (
-            supabase.table("images")
-            .select("*")
-            .order("created_at", desc=True)
-            .limit(50)
-            .execute()
-        )
-    else:
-        result = (
-            supabase.table("images")
-            .select("*")
-            .ilike("description", f"%{query}%")
-            .order("created_at", desc=True)
-            .limit(50)
-            .execute()
-        )
+        return jsonify([])  # Return empty if no search query
 
+    result = (
+        supabase.table("images")
+        .select("*")
+        .ilike("description", f"%{query}%")
+        .order("created_at", desc=True)
+        .limit(50)
+        .execute()
+    )
     return jsonify(result.data)
+
+
+@app.route("/claim/<image_id>", methods=["DELETE"])
+def claim(image_id):
+    # Get the image record first
+    result = supabase.table("images").select("*").eq("id", image_id).execute()
+    if not result.data:
+        return jsonify({"error": "Image not found"}), 404
+
+    filename = result.data[0]["filename"]
+
+    # Delete from storage
+    supabase.storage.from_(BUCKET_NAME).remove([filename])
+
+    # Delete from database
+    supabase.table("images").delete().eq("id", image_id).execute()
+
+    return jsonify({"success": True}), 200
 
 
 if __name__ == "__main__":
