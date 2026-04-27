@@ -40,9 +40,12 @@ def describe_image(image_bytes: bytes) -> str:
                     {
                         "type": "text",
                         "text": (
-                            "Describe this image in 2-4 sentences. "
-                            "Be specific about objects, people, colors, and setting. "
-                            "Write naturally as if describing it to someone who cannot see it."
+                            "This image was taken inside a black box with beige/brown paper on the ground. "
+                            "Ignore the box and the paper background. "
+                            "Focus only on the single item placed inside the box. "
+                            "Describe that item in 2-3 sentences — its shape, color, size, and what it appears to be. "
+                            "If there are any visible labels, text, logos, or markings on the item, read and include them in your description. "
+                            "Be specific enough that someone could identify it from your description alone."
                         ),
                     },
                 ],
@@ -118,7 +121,7 @@ def upload():
 def search():
     query = request.args.get("q", "").strip()
     if not query:
-        return jsonify([])  # Return empty if no search query
+        return jsonify([])
 
     result = (
         supabase.table("images")
@@ -133,17 +136,13 @@ def search():
 
 @app.route("/claim/<image_id>", methods=["DELETE"])
 def claim(image_id):
-    # Get the image record first
     result = supabase.table("images").select("*").eq("id", image_id).execute()
     if not result.data:
         return jsonify({"error": "Image not found"}), 404
 
     filename = result.data[0]["filename"]
 
-    # Delete from storage
     supabase.storage.from_(BUCKET_NAME).remove([filename])
-
-    # Delete from database
     supabase.table("images").delete().eq("id", image_id).execute()
 
     return jsonify({"success": True}), 200
